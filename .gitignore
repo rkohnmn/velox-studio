@@ -1,0 +1,30 @@
+# Build directories and binaries
+build/
+bin/
+lib/
+*.o
+*.obj
+*.a
+*.so
+*.dylib
+*.exe
+/velox
+/velox_tests
+/velox_bench
+
+# Environment & secrets
+.env
+.env.local
+
+# IDE & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+compile_commands.json
+
+# Generated runtime artifacts
+*.prof
+*.flamegraph.txt
+bench_1m.csv
+*.bmp

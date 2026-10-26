@@ -1,0 +1,13 @@
+region,service,latency_ms,revenue_usd,date
+APAC,ComputeEngine,11.4,4820.50,2026-10-01
+EMEA,CoreStorage,14.8,3890.00,2026-10-01
+US-West,EdgeGateway,9.2,3410.25,2026-10-01
+LATAM,RelayMesh,19.6,1980.40,2026-10-01
+APAC,ComputeEngine,10.9,5120.75,2026-10-02
+EMEA,CoreStorage,15.1,4010.10,2026-10-02
+US-West,EdgeGateway,8.8,3690.80,2026-10-02
+LATAM,RelayMesh,18.9,2150.00,2026-10-02
+APAC,ComputeEngine,11.1,5340.20,2026-10-03
+EMEA,CoreStorage,14.5,4190.60,2026-10-03
+US-West,EdgeGateway,9.0,3780.90,2026-10-03
+LATAM,RelayMesh,19.2,2290.15,2026-10-03

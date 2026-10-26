@@ -1,0 +1,28 @@
+name: Velox Studio C++20 CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Build Velox Binary & Test Suite (Strict -Wall -Wextra -Werror -O3)
+        run: make all
+
+      - name: Run Deterministic Unit & Perceptual Audit Tests
+        run: make test
+
+      - name: Run 250k-Row Zero-Copy Throughput Benchmark
+        run: make bench
+
+      - name: Validate Repository Hygiene & Design Tokens
+        run: |
+          python3 scripts/validate_project.py .
+          python3 scripts/ost_linter.py --input docs/ost.json

@@ -1,0 +1,13 @@
+participant_id,usage_frequency,primary_task,platform,technical_proficiency,pain_point,evidence_tag,requires_keyboard_only,prefers_reduced_motion
+participant_01,daily,inspect_large_csv,Linux X11,9,Excel truncates at 1M rows and DBeaver cold-starts in 11s,[PERFORMANCE],true,false
+participant_02,daily,audit_sql_schema,Linux X11,8,Unindexed foreign keys caused production lock during DELETE,[PAIN],false,false
+participant_03,daily,export_statistical_charts,Windows Desktop,7,Default spreadsheet charts truncate baselines and distort ratios,[ERROR],false,true
+participant_04,weekly,profile_api_traces,Linux X11,9,N+1 ORM queries hidden until P99 latency breached 100ms SLA,[PERFORMANCE],true,false
+participant_05,daily,verify_citations,macOS,8,Hallucinated DOIs and retracted preprints slipped into draft,[PAIN],false,false
+participant_06,occasional,review_team_metrics,Windows Desktop,5,Unclear how to reset filter and KDE bandwidth after tweaking,[BEHAVIOR],false,true
+participant_07,daily,inspect_large_csv,Linux X11,9,Need full keyboard navigation without touching mouse,[ACCESSIBILITY],true,true
+participant_08,weekly,audit_sql_schema,Windows Desktop,8,Need zero-downtime expand-contract SQL migration script,[GOAL],false,false
+participant_09,daily,export_statistical_charts,Linux X11,7,Red-green palette unreadable with deuteranopia,[ACCESSIBILITY],false,false
+participant_10,daily,profile_api_traces,Linux X11,9,Need OLS regression slope to confirm gradual heap leak,[GOAL],true,false
+participant_11,occasional,review_team_metrics,macOS,6,Want immediate visual confirmation of file SHA-256 provenance,[CONTEXT],false,false
+participant_12,daily,inspect_large_csv,Windows Desktop,8,Long file imports must show determinate progress and cancel safely,[PAIN],false,false

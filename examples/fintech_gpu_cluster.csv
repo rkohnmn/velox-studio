@@ -1,0 +1,9 @@
+cluster_zone,workload,gpu_util_pct,HourlyCostUSD,timestamp
+NY4-Equinix,OrderBookSim,94.2,18450.00,2026-10-20
+LD4-Slough,RiskMonteCarlo,88.6,14920.50,2026-10-20
+TY3-Tokyo,AlphaTransformer,91.8,12310.75,2026-10-20
+FR2-Frankfurt,FXArbEngine,79.4,8640.20,2026-10-20
+NY4-Equinix,OrderBookSim,96.1,19120.00,2026-10-21
+LD4-Slough,RiskMonteCarlo,89.5,15480.00,2026-10-21
+TY3-Tokyo,AlphaTransformer,93.0,12890.25,2026-10-21
+FR2-Frankfurt,FXArbEngine,81.2,9110.80,2026-10-21

@@ -1,0 +1,9 @@
+timestamp_ms,request_id,endpoint,operation,duration_ms,memory_kb,query_fingerprint
+1000,req_101,GET /api/v1/orders,SELECT_ORDER_ITEM,14.5,42000,SELECT * FROM order_items WHERE order_id = ?
+1050,req_101,GET /api/v1/orders,SELECT_ORDER_ITEM,15.2,42150,SELECT * FROM order_items WHERE order_id = ?
+1100,req_101,GET /api/v1/orders,SELECT_ORDER_ITEM,16.1,42310,SELECT * FROM order_items WHERE order_id = ?
+1150,req_101,GET /api/v1/orders,SELECT_ORDER_ITEM,17.0,42480,SELECT * FROM order_items WHERE order_id = ?
+1200,req_101,GET /api/v1/orders,SELECT_ORDER_ITEM,18.4,42660,SELECT * FROM order_items WHERE order_id = ?
+1250,req_101,GET /api/v1/orders,SELECT_ORDER_ITEM,19.1,42850,SELECT * FROM order_items WHERE order_id = ?
+1500,req_102,POST /api/v1/checkout,STRIPE_AUTH,142.8,43100,INSERT INTO payments VALUES (?)
+2000,req_103,GET /api/v1/health,PING,1.4,43500,none
