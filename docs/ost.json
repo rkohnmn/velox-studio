@@ -1,0 +1,43 @@
+{
+  "outcome": {
+    "id": "O1",
+    "statement": "Reduce cold-start to first validated chart/schema/trace insight on >=100 MB local datasets from >8,000 ms (Electron/JVM incumbents) to <200 ms with 0 telemetry leaks and 100% perceptual Lie-Factor compliance.",
+    "metric": "P95 Time-to-First-Verified-Insight (ms)",
+    "baseline_ms": 8400,
+    "target_ms": 200
+  },
+  "opportunities": [
+    {
+      "id": "OPP-1",
+      "need": "Developers and analysts struggle when opening 100 MB - 2 GB CSV/log files because Excel truncates at 1,048,576 rows and Electron viewers consume >1.2 GB RAM.",
+      "solutions": [
+        {
+          "id": "SOL-1A",
+          "name": "POSIX mmap Zero-Copy String-View Columnar Scanner + L1-Resident FNV-1a Hash Aggregator",
+          "assumption_test": "Benchmark 250,000 rows (10 MiB) full scan + Welford moments + SHA-256 in <200 ms with <16 MiB RSS."
+        },
+        {
+          "id": "SOL-1B",
+          "name": "Multi-threaded chunked stdio fread pipeline",
+          "assumption_test": "Compare syscall overhead against mmap + madvise(MADV_SEQUENTIAL)."
+        }
+      ]
+    },
+    {
+      "id": "OPP-2",
+      "need": "Analysts struggle to trust AI- or spreadsheet-generated charts and citations because truncated baselines, dual axes, and hallucinated DOIs slip into stakeholder decks.",
+      "solutions": [
+        {
+          "id": "SOL-2A",
+          "name": "Deterministic 15-Point Pre-Flight Perceptual Auditor (Cleveland-McGill + Lie Factor) & Epistemic Citation Verifier",
+          "assumption_test": "Catch 100% of Lie Factor > 1.05 distortions and Type I-V citation failures in automated CI tests."
+        },
+        {
+          "id": "SOL-2B",
+          "name": "Post-hoc LLM vision critique of exported PNG charts",
+          "assumption_test": "Compare latency and determinism against mathematical AST/scale verification."
+        }
+      ]
+    }
+  ]
+}
