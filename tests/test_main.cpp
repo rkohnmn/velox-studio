@@ -74,6 +74,44 @@ void testCsvEngineAndQuantiles() {
     ++g_tests_passed;
 }
 
+void testCsvQuotedRecordsAndHighCardinality() {
+    // Quoted LF and CRLF are part of a record, not record separators.
+    const std::string multiline = "team,metric\n\"north\nwing\",5\nSouth,7\n";
+    auto summary = CsvEngine::analyze(multiline, "quoted.csv");
+    ASSERT_TRUE(summary.row_count == 2, "Quoted newline must not add a phantom CSV row");
+    ASSERT_NEAR(summary.columns[1].mean, 6.0, 1e-9, "Quoted row numeric summary must remain intact");
+    const auto groups = CsvEngine::groupByAggregate(multiline, 0, 1, ',');
+    ASSERT_TRUE(groups.size() == 2, "Group-by must preserve multiline quoted keys");
+    bool found_multiline = false;
+    for (const auto& group : groups) {
+        if (group.key == "north\nwing" && group.count == 1 && group.sum == 5.0) {
+            found_multiline = true;
+        }
+    }
+    ASSERT_TRUE(found_multiline, "Quoted multiline group key survives record parsing");
+
+    const auto quoted_header = CsvEngine::analyze("\"team,name\";metric\nWest;2\n", "header.csv");
+    ASSERT_TRUE(quoted_header.delimiter == ';' && quoted_header.column_count == 2,
+                "Delimiters inside quoted headers must be ignored");
+
+    std::string many = "key,amount\n";
+    for (int i = 0; i < 160; ++i) {
+        many += "k" + std::to_string(i) + ",1\n";
+    }
+    many += "k159,9\n";
+    const auto wide_groups = CsvEngine::groupByAggregate(many, 0, 1, ',');
+    ASSERT_TRUE(wide_groups.size() == 160, "All 160 unique groups must survive the 128-slot fast table");
+    std::size_t total_rows = 0;
+    double total_sum = 0.0;
+    for (const auto& group : wide_groups) {
+        total_rows += group.count;
+        total_sum += group.sum;
+    }
+    ASSERT_TRUE(total_rows == 161, "Overflow groups retain their repeated rows");
+    ASSERT_NEAR(total_sum, 169.0, 1e-9, "Overflow group totals are not discarded");
+    ++g_tests_passed;
+}
+
 void testVizEngineLaws() {
     double lf = VizEngine::computeLieFactor(15.0 / 10.0, 105.0 / 100.0);
     ASSERT_NEAR(lf, 1.42857, 1e-4, "Truncated baseline Lie Factor must equal ~1.43");
@@ -320,6 +358,7 @@ int main() {
     std::cout << "Running Velox Studio C++20 Deterministic & Native GUI Test Suite...\n";
     testArenaAndSha256();
     testCsvEngineAndQuantiles();
+    testCsvQuotedRecordsAndHighCardinality();
     testVizEngineLaws();
     testSchemaEngine();
     testProfilerEngine();

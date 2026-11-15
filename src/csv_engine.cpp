@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <limits>
+#include <unordered_map>
 #include <unordered_set>
 
 namespace velox {
@@ -121,6 +122,31 @@ inline double computeQuantileSorted(const std::vector<double>& sorted, double q)
     return sorted[idx];
 }
 
+// Reads one logical CSV record, retaining embedded quoted newlines. Escaped
+// double-quotes do not end the quoted span. The returned view borrows content.
+std::string_view nextCsvRecord(const char*& cursor, const char* end) noexcept {
+    const char* start = cursor;
+    bool in_quotes = false;
+    while (cursor < end) {
+        const char c = *cursor;
+        if (c == '"') {
+            if (in_quotes && cursor + 1 < end && cursor[1] == '"') {
+                cursor += 2;
+                continue;
+            }
+            in_quotes = !in_quotes;
+        } else if (c == '\n' && !in_quotes) {
+            const char* stop = cursor++;
+            if (stop > start && stop[-1] == '\r') --stop;
+            return {start, static_cast<std::size_t>(stop - start)};
+        }
+        ++cursor;
+    }
+    const char* stop = end;
+    if (stop > start && stop[-1] == '\r') --stop;
+    return {start, static_cast<std::size_t>(stop - start)};
+}
+
 void splitLineCells(std::string_view line, char delimiter, std::vector<std::string_view>& out) {
     out.clear();
     const char* ptr = line.data();
@@ -144,12 +170,19 @@ void splitLineCells(std::string_view line, char delimiter, std::vector<std::stri
 } // namespace
 
 char CsvEngine::detectDelimiter(std::string_view sample) noexcept {
-    std::size_t newline_pos = sample.find('\n');
-    std::string_view first_line = (newline_pos == std::string_view::npos)
-                                      ? sample
-                                      : sample.substr(0, newline_pos);
+    if (sample.empty()) return ',';
+    const char* cursor = sample.data();
+    const auto first_line = nextCsvRecord(cursor, cursor + sample.size());
     std::size_t commas = 0, tabs = 0, pipes = 0, semis = 0;
-    for (char c : first_line) {
+    bool in_quotes = false;
+    for (std::size_t i = 0; i < first_line.size(); ++i) {
+        const char c = first_line[i];
+        if (c == '"') {
+            if (in_quotes && i + 1 < first_line.size() && first_line[i + 1] == '"') ++i;
+            else in_quotes = !in_quotes;
+            continue;
+        }
+        if (in_quotes) continue;
         if (c == ',') ++commas;
         else if (c == '\t') ++tabs;
         else if (c == '|') ++pipes;
@@ -188,13 +221,7 @@ DatasetSummary CsvEngine::analyze(std::string_view content,
     const char* ptr = content.data();
     const char* end = ptr + content.size();
 
-    const char* nl = static_cast<const char*>(std::memchr(ptr, '\n', static_cast<std::size_t>(end - ptr)));
-    std::string_view header_line = nl
-        ? std::string_view(ptr, static_cast<std::size_t>(nl - ptr))
-        : std::string_view(ptr, static_cast<std::size_t>(end - ptr));
-    if (!header_line.empty() && header_line.back() == '\r') {
-        header_line.remove_suffix(1);
-    }
+    std::string_view header_line = nextCsvRecord(ptr, end);
 
     std::vector<std::string_view> cells;
     cells.reserve(32);
@@ -221,18 +248,8 @@ DatasetSummary CsvEngine::analyze(std::string_view content,
         }
     }
 
-    ptr = nl ? (nl + 1) : end;
-
     while (ptr < end) {
-        const char* line_end = static_cast<const char*>(
-            std::memchr(ptr, '\n', static_cast<std::size_t>(end - ptr)));
-        if (!line_end) line_end = end;
-
-        std::string_view line(ptr, static_cast<std::size_t>(line_end - ptr));
-        if (!line.empty() && line.back() == '\r') {
-            line.remove_suffix(1);
-        }
-        ptr = (line_end < end) ? (line_end + 1) : end;
+        const std::string_view line = nextCsvRecord(ptr, end);
 
         if (line.empty()) continue;
 
@@ -345,23 +362,22 @@ std::vector<GroupByResultRow> CsvEngine::groupByAggregate(
         bool occupied = false;
     };
     alignas(64) FlatSlot table[128]{};
+    // Keep the fast stack table for the common case; preserve every distinct
+    // group once it fills, instead of silently dropping additional keys.
+    std::unordered_map<std::string, GroupByResultRow> overflow;
+    if (content.empty()) return {};
 
     const char* ptr = content.data();
     const char* end = ptr + content.size();
 
-    const char* nl = static_cast<const char*>(std::memchr(ptr, '\n', static_cast<std::size_t>(end - ptr)));
-    ptr = nl ? (nl + 1) : end;
+    (void)nextCsvRecord(ptr, end); // Header
 
     std::size_t max_needed_col = std::max(key_col_idx, val_col_idx);
 
     while (ptr < end) {
-        const char* line_end = static_cast<const char*>(
-            std::memchr(ptr, '\n', static_cast<std::size_t>(end - ptr)));
-        if (!line_end) line_end = end;
-
-        const char* row_end = (line_end > ptr && *(line_end - 1) == '\r') ? (line_end - 1) : line_end;
-        const char* cur = ptr;
-        ptr = (line_end < end) ? (line_end + 1) : end;
+        const std::string_view record = nextCsvRecord(ptr, end);
+        const char* cur = record.data();
+        const char* row_end = cur + record.size();
         if (cur >= row_end) continue;
 
         std::string_view key_sv{};
@@ -403,6 +419,7 @@ std::vector<GroupByResultRow> CsvEngine::groupByAggregate(
             h *= 1099511628211ULL;
         }
         std::size_t slot = static_cast<std::size_t>(h & 127ULL);
+        bool stored = false;
         for (std::size_t probe = 0; probe < 128; ++probe) {
             auto& s = table[(slot + probe) & 127ULL];
             if (!s.occupied) {
@@ -412,6 +429,7 @@ std::vector<GroupByResultRow> CsvEngine::groupByAggregate(
                 s.sum = val;
                 s.min = val;
                 s.max = val;
+                stored = true;
                 break;
             }
             if (s.key == key) {
@@ -419,12 +437,28 @@ std::vector<GroupByResultRow> CsvEngine::groupByAggregate(
                 s.sum += val;
                 if (val < s.min) s.min = val;
                 if (val > s.max) s.max = val;
+                stored = true;
                 break;
             }
+        }
+        if (!stored) {
+            auto& row = overflow[std::string(key)];
+            if (row.count == 0) {
+                row.key = std::string(key);
+                row.min = val;
+                row.max = val;
+            } else {
+                if (val < row.min) row.min = val;
+                if (val > row.max) row.max = val;
+            }
+            ++row.count;
+            row.sum += val;
+            row.mean = row.sum / static_cast<double>(row.count);
         }
     }
 
     std::vector<GroupByResultRow> result;
+    result.reserve(128 + overflow.size());
     for (const auto& s : table) {
         if (!s.occupied) continue;
         GroupByResultRow row;
@@ -434,6 +468,10 @@ std::vector<GroupByResultRow> CsvEngine::groupByAggregate(
         row.mean = (s.count > 0) ? (s.sum / static_cast<double>(s.count)) : 0.0;
         row.min = (s.count > 0) ? s.min : 0.0;
         row.max = (s.count > 0) ? s.max : 0.0;
+        result.push_back(std::move(row));
+    }
+    for (auto& [key, row] : overflow) {
+        (void)key;
         result.push_back(std::move(row));
     }
 
